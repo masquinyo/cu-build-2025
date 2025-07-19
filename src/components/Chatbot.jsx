@@ -10,6 +10,7 @@ const Chatbot = ({ accountId }) => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isGeneratingDashboard, setIsGeneratingDashboard] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -251,22 +252,12 @@ const Chatbot = ({ accountId }) => {
       const response = await ChatbotService.createSession(accountNumbers);
       
       setSessionId(response.sessionId);
-      setMessages([{
-        role: 'assistant',
-        content: `Hello! 👋 I'm your AI Financial Health Assistant!
-
-I'm analyzing your account data now to show you a comprehensive dashboard with your transaction patterns and financial health metrics...
-
-Let me start by gathering your account information and creating visualizations to show your financial behavior and any areas that need attention.`,
-        timestamp: new Date()
-      }]);
       
       console.log('Chat session initialized:', response.sessionId);
       
-      // Automatically trigger dashboard generation
-      setTimeout(() => {
-        triggerInitialDashboard(response.sessionId);
-      }, 1000);
+      // Set dashboard generation state and trigger
+      setIsGeneratingDashboard(true);
+      triggerInitialDashboard(response.sessionId);
     } catch (error) {
       console.error('Failed to initialize chat session:', error);
       setError('Failed to start chat session. Please try again.');
@@ -281,58 +272,43 @@ Let me start by gathering your account information and creating visualizations t
     console.log('🚀 Triggering initial dashboard generation...');
     setIsStreaming(true);
 
-    // Add placeholder for assistant response (dashboard)
-    const assistantMessageIndex = messages.length;
-    setMessages(prev => [...prev, {
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      isStreaming: true
-    }]);
-
     try {
       let assistantResponse = '';
       
       // Send initial trigger message to generate dashboard
       await ChatbotService.sendMessage(sessionId, "Please show me my financial health dashboard with account behavior charts, transaction breakdown, and analysis of any unmet criteria.", (chunk) => {
         assistantResponse += chunk;
-        
-        // Update the streaming message
-        setMessages(prev => prev.map((msg, index) => 
-          index === assistantMessageIndex 
-            ? { ...msg, content: assistantResponse }
-            : msg
-        ));
       });
 
-      // Mark streaming as complete
-      setMessages(prev => prev.map((msg, index) => 
-        index === assistantMessageIndex 
-          ? { ...msg, isStreaming: false }
-          : msg
-      ));
+      // Once complete, set the message and hide dashboard generation state
+      setMessages([{
+        role: 'assistant',
+        content: assistantResponse,
+        timestamp: new Date(),
+        isStreaming: false
+      }]);
+
+      setIsGeneratingDashboard(false);
 
     } catch (error) {
       console.error('Failed to generate initial dashboard:', error);
       
-      // Replace streaming message with error
-      setMessages(prev => prev.map((msg, index) => 
-        index === assistantMessageIndex 
-          ? { 
-              ...msg, 
-              content: 'I apologize, but I encountered an error generating your dashboard. Let me try again or you can ask me a specific question about your financial health.',
-              isStreaming: false,
-              isError: true
-            }
-          : msg
-      ));
+      setMessages([{
+        role: 'assistant',
+        content: 'I apologize, but I encountered an error generating your dashboard. Let me try again or you can ask me a specific question about your financial health.',
+        timestamp: new Date(),
+        isStreaming: false,
+        isError: true
+      }]);
+
+      setIsGeneratingDashboard(false);
     } finally {
       setIsStreaming(false);
     }
   };
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !sessionId || isStreaming) return;
+    if (!inputMessage.trim() || !sessionId || isStreaming || isGeneratingDashboard) return;
 
     const userMessage = inputMessage.trim();
     setInputMessage('');
@@ -424,12 +400,12 @@ Let me start by gathering your account information and creating visualizations t
     }
   };
 
-  if (isInitializing) {
+  if (isInitializing || isGeneratingDashboard) {
     return (
       <div className="chatbot-container">
         <div className="chatbot-loading">
           <div className="loading-spinner"></div>
-          <p>Initializing chat session...</p>
+          <p>{isInitializing ? 'Loading your financial dashboard...' : 'Generating your dashboard...'}</p>
         </div>
       </div>
     );
@@ -498,12 +474,12 @@ Let me start by gathering your account information and creating visualizations t
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about your financial health, scores, or get personalized advice..."
-            disabled={isStreaming || !sessionId}
+            disabled={isStreaming || !sessionId || isGeneratingDashboard}
             rows="2"
           />
           <button 
             onClick={sendMessage}
-            disabled={!inputMessage.trim() || isStreaming || !sessionId}
+            disabled={!inputMessage.trim() || isStreaming || !sessionId || isGeneratingDashboard}
             className="send-button"
           >
             {isStreaming ? '⏳' : '➤'}

@@ -18,6 +18,7 @@ function App() {
     setAccountId('');
   };
 
+
   if (showChatbot) {
     return (
       <div className="app-container">

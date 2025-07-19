@@ -499,6 +499,46 @@
   text-align: center;
 }
 
+/* App Loading State */
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px;
+}
+
+.app-loading-content {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 60px 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+}
+
+.app-loading-content h3 {
+  color: #333;
+  margin: 20px 0 10px 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.app-loading-content p {
+  color: #666;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.app-loading-content .loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #667eea;
+  margin-bottom: 30px;
+}
+
 .chatbot-loading, .chatbot-error {
   display: flex;
   flex-direction: column;
