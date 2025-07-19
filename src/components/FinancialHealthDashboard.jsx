@@ -71,8 +71,7 @@ const FinancialHealthDashboard = ({ memberId }) => {
   if (loading) {
     return (
       <div className="loading">
-        <div>🔄 Analyzing your financial health...</div>
-        <p>Connecting to MCP server and processing data</p>
+        <div>🔄 AI Agent is evaluating and processing data</div>
       </div>
     );
   }
@@ -89,8 +88,8 @@ const FinancialHealthDashboard = ({ memberId }) => {
     );
   }
 
-  // Handle "no data" case
-  if (healthData && (healthData.hasData === false || healthData.error === "No Financial Health found")) {
+  // Handle "no data" case - check for exists-state false or existing patterns
+  if (healthData && (healthData['exists-state'] === false || healthData.hasData === false || healthData.error === "No Financial Health found")) {
     return (
       <div className="dashboard">
         <header className="dashboard-header">
@@ -101,16 +100,33 @@ const FinancialHealthDashboard = ({ memberId }) => {
         <div className="no-data-container">
           <div className="no-data-message">
             <div className="no-data-icon">📊</div>
-            <h2>No Financial Health Data Found</h2>
-            <p>We couldn't find any financial data for member <strong>{memberId}</strong>.</p>
-            <div className="no-data-details">
-              <p>This could happen if:</p>
-              <ul>
-                <li>The member ID doesn't exist in our system</li>
-                <li>No financial transactions have been recorded</li>
-                <li>The member account is new or inactive</li>
-              </ul>
-            </div>
+            {healthData['exists-state'] === false ? (
+              <>
+                <h2>Financial Health Status Not Found</h2>
+                <p>Member <strong>{memberId}</strong> was not found in our system.</p>
+                <div className="no-data-details">
+                  <p>Please verify:</p>
+                  <ul>
+                    <li>The member ID is correct and complete</li>
+                    <li>The member is registered in the system</li>
+                    <li>There are no typos or extra characters</li>
+                  </ul>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>No Financial Health Data Found</h2>
+                <p>We couldn't find any financial data for member <strong>{memberId}</strong>.</p>
+                <div className="no-data-details">
+                  <p>This could happen if:</p>
+                  <ul>
+                    <li>The member ID doesn't exist in our system</li>
+                    <li>No financial transactions have been recorded</li>
+                    <li>The member account is new or inactive</li>
+                  </ul>
+                </div>
+              </>
+            )}
             <button onClick={fetchFinancialHealth} className="retry-button">
               🔄 Try Again
             </button>
