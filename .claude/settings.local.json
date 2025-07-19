@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp:*)",
+      "Bash(env)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(rm:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "mcp__puppeteer__puppeteer_navigate",
+      "Bash(pkill:*)"
+    ],
+    "deny": []
+  }
+}
