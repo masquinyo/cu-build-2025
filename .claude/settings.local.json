@@ -10,7 +10,12 @@
       "Bash(npm install)",
       "Bash(npm run dev:*)",
       "mcp__puppeteer__puppeteer_navigate",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(npm run server:*)",
+      "Bash(curl:*)",
+      "Bash(npm install:*)",
+      "Bash(cat:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

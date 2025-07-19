@@ -6,6 +6,7 @@ interface AIConfig {
   baseURL?: string;
   model?: string;
   maxTokens?: number;
+  toolsEndpoint?: string;
 }
 
 interface ProviderInfo {
@@ -16,8 +17,9 @@ interface ProviderInfo {
 }
 
 interface AIStrategy {
-  generateResponse(prompt: string): Promise<string>;
+  generateResponse(prompt: string, tools?: any[]): Promise<string>;
   getModelInfo(): any;
+  getAvailableTools?(): Promise<any[]>;
 }
 
 class AIStrategyFactory {
@@ -30,7 +32,8 @@ class AIStrategyFactory {
           apiKey: config.apiKey,
           baseURL: config.baseURL,
           model: config.model,
-          maxTokens: config.maxTokens
+          maxTokens: config.maxTokens,
+          toolsEndpoint: config.toolsEndpoint
         });
       
       case 'openai':

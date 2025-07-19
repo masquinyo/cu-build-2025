@@ -1,104 +1,113 @@
 import React, { useState } from 'react';
-import FinancialHealthDashboard from './components/FinancialHealthDashboard';
+import Chatbot from './components/Chatbot';
 import './App.css';
 
 function App() {
-  const [memberId, setMemberId] = useState('');
-  const [showDashboard, setShowDashboard] = useState(false);
+  const [accountId, setAccountId] = useState('');
+  const [showChatbot, setShowChatbot] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (memberId.trim()) {
-      setShowDashboard(true);
+    if (accountId.trim()) {
+      setShowChatbot(true);
     }
   };
 
   const handleReset = () => {
-    setShowDashboard(false);
-    setMemberId('');
+    setShowChatbot(false);
+    setAccountId('');
   };
 
-  if (showDashboard) {
+  if (showChatbot) {
     return (
-      <div className="container">
-        <button onClick={handleReset} className="back-button">
-          ← Back to Configuration
-        </button>
-        <FinancialHealthDashboard memberId={memberId} />
+      <div className="app-container">
+        <div className="app-header">
+          <div className="header-content">
+            <h1>🤖 Financial Health AI Assistant</h1>
+          </div>
+          <button onClick={handleReset} className="reset-button">
+            🔄 New Session
+          </button>
+        </div>
+        <Chatbot accountId={accountId} />
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <div className="config-form">
-        <div className="form-header">
-          <h1>🏦 Financial Health Dashboard</h1>
-          <p>Analyze member financial health using MCP server and AI insights</p>
+    <div className="app-container">
+      <div className="welcome-screen">
+        <div className="welcome-header">
+          <h1>🤖 Financial Health AI Assistant</h1>
+          <p>Your personal AI advisor for financial health analysis and insights</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="configuration-form">
+        <div className="intro-section">
+          <div className="intro-message">
+            <h2>👋 Hello! I'm your Financial Health Assistant</h2>
+            <p>I provide comprehensive analytics and can help you by:</p>
+            <ul>
+              <li>🏢 <strong>Financial analysis</strong> - Start with overall performance and metrics</li>
+              <li>📊 <strong>Custom visualizations</strong> - Show exactly what you want to see</li>
+              <li>👥 <strong>Member insights when needed</strong> - Access Member_Snapshot data as appropriate</li>
+              <li>💡 <strong>Personalized advice</strong> - Tailored recommendations for your situation</li>
+              <li>📈 <strong>Progress tracking</strong> - Monitor improvements over time</li>
+              <li>❓ <strong>Answering your questions</strong> - Ask me anything about your finances</li>
+            </ul>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="member-form">
           <div className="form-group">
-            <label htmlFor="memberId">Member ID</label>
+            <label htmlFor="accountId">What's your Account ID?</label>
             <input
               type="text"
-              id="memberId"
-              value={memberId}
-              onChange={(e) => setMemberId(e.target.value)}
-              placeholder="Enter member ID to analyze"
+              id="accountId"
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              placeholder="Enter your account ID (e.g., 16312)"
               required
             />
-            <small>Enter the member ID you want to analyze for financial health</small>
+            <small>I'll use this to access your financial data securely</small>
           </div>
 
-          <button type="submit" className="analyze-button">
-            🚀 Analyze Financial Health
+          <button type="submit" className="start-chat-button">
+            💬 Start Conversation
           </button>
         </form>
 
-
-        <div className="feature-preview">
-          <h3>What you'll see:</h3>
-          <div className="feature-list">
-            <div className="feature-item">
-              <span>📊</span>
-              <div>
-                <strong>Financial Health Score</strong>
-                <p>Overall assessment based on 4 key criteria</p>
-              </div>
-            </div>
-            <div className="feature-item">
-              <span>💰</span>
-              <div>
-                <strong>Detailed Criteria Analysis</strong>
-                <p>Monthly deposits, NSF fees, balance ratios, and spending efficiency</p>
-              </div>
-            </div>
-            <div className="feature-item">
-              <span>💡</span>
-              <div>
-                <strong>Personalized Tips</strong>
-                <p>AI-generated recommendations for improvement</p>
-              </div>
-            </div>
-            <div className="feature-item">
-              <span>🎯</span>
-              <div>
-                <strong>Encouragement Message</strong>
-                <p>Positive motivation based on current financial health level</p>
-              </div>
-            </div>
+        <div className="capabilities-grid">
+          <div className="capability-card">
+            <div className="capability-icon">📊</div>
+            <h3>Real-time Analysis</h3>
+            <p>I query your live data to provide current insights and trends</p>
+          </div>
+          <div className="capability-card">
+            <div className="capability-icon">🎨</div>
+            <h3>Custom Visuals</h3>
+            <p>Tell me what you want to see and I'll create the perfect visualization</p>
+          </div>
+          <div className="capability-card">
+            <div className="capability-icon">🎯</div>
+            <h3>Personalized Goals</h3>
+            <p>Get specific recommendations based on your unique financial situation</p>
+          </div>
+          <div className="capability-card">
+            <div className="capability-icon">💬</div>
+            <h3>Natural Conversation</h3>
+            <p>Ask questions in plain English - no complex forms or menus</p>
           </div>
         </div>
 
-        <div className="criteria-info">
-          <h3>Financial Health Criteria:</h3>
-          <ul>
-            <li><strong>Minimum Monthly Deposits:</strong> $1,200+</li>
-            <li><strong>NSF Fees:</strong> ≤3 in last 6 months</li>
-            <li><strong>Average Daily Balance:</strong> ≥20% of income (3 of 4 months)</li>
-            <li><strong>Spending Efficiency:</strong> ≥95% of deposits (3 of 4 months)</li>
-          </ul>
+        <div className="example-questions">
+          <h3>🗣️ Try asking me things like:</h3>
+          <div className="question-examples">
+            <div className="question-example">"Show me my financial health"</div>
+            <div className="question-example">"What are the spending patterns?"</div>
+            <div className="question-example">"What should I focus on improving?"</div>
+            <div className="question-example">"Show me members in this account"</div>
+            <div className="question-example">"Create a chart of NSF fees"</div>
+          </div>
         </div>
       </div>
     </div>

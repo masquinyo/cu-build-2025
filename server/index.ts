@@ -1,8 +1,10 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import Anthropic from '@anthropic-ai/sdk';
 import MCPServerManager from './services/mcpServerManager';
 import AIService from './services/aiService';
+import ChatbotService from './services/chatbotService';
 
 dotenv.config();
 
@@ -24,7 +26,22 @@ const aiService = new AIService({
   maxTokens: parseInt(process.env.AI_MAX_TOKENS || '2000')
 });
 
-const mcpManager = new MCPServerManager(aiService);
+const mcpManager = new MCPServerManager({
+  aiService,
+  mcpServerUrl: process.env.MCP_SERVER_URL || 'https://dev.mcp.riseanalytics.io'
+});
+
+// Initialize Anthropic client for chatbot
+const anthropicClient = new Anthropic({
+  apiKey: process.env.AI_API_KEY!
+});
+
+const chatbotService = new ChatbotService({
+  anthropicClient,
+  mcpManager,
+  model: process.env.AI_MODEL || 'claude-3-sonnet-20240229',
+  maxTokens: parseInt(process.env.AI_MAX_TOKENS || '4000')
+});
 
 interface FinancialHealthParams {
   memberId: string;
@@ -45,6 +62,142 @@ interface ConfigResponse {
   aiModelInfo: any;
   supportedProviders: any;
 }
+
+interface ChatSessionRequest {
+  accountNumbers?: string[];
+}
+
+interface ChatMessageRequest {
+  message: string;
+}
+
+// Chat endpoints
+app.post('/api/chat/session', async (req: Request<{}, {}, ChatSessionRequest>, res: Response) => {
+  try {
+    const { accountNumbers = ['16312'] } = req.body; // Default to test account
+    const sessionId = await chatbotService.createSession(accountNumbers);
+    
+    console.log(`✅ Created chat session: ${sessionId} for accounts: ${accountNumbers.join(', ')}`);
+    
+    res.json({ 
+      sessionId,
+      accountNumbers,
+      message: 'Chat session created successfully. You can now ask questions about your financial health!'
+    });
+  } catch (error: any) {
+    console.error('❌ Failed to create chat session:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to create chat session',
+      details: error.message 
+    });
+  }
+});
+
+app.post('/api/chat/:sessionId/message', async (req: Request<{sessionId: string}, {}, ChatMessageRequest>, res: Response) => {
+  const { sessionId } = req.params;
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  try {
+    // Set headers for Server-Sent Events
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    console.log(`💬 Streaming response for session ${sessionId}`);
+
+    const messageStream = chatbotService.streamMessage(sessionId, message);
+    
+    for await (const chunk of messageStream) {
+      res.write(chunk);
+    }
+    
+    res.end();
+    console.log(`✅ Completed streaming response for session ${sessionId}`);
+    
+  } catch (error: any) {
+    console.error(`❌ Chat error for session ${sessionId}:`, error.message);
+    
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Chat processing failed',
+        details: error.message 
+      });
+    } else {
+      res.write(`\n\nI apologize, but I encountered an error: ${error.message}`);
+      res.end();
+    }
+  }
+});
+
+app.get('/api/chat/:sessionId', async (req: Request<{sessionId: string}>, res: Response) => {
+  const { sessionId } = req.params;
+  
+  try {
+    const session = chatbotService.getSession(sessionId);
+    
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    res.json({
+      sessionId: session.sessionId,
+      accountNumbers: session.memberContext.accountNumbers,
+      messageCount: session.conversationHistory.filter(msg => msg.role !== 'system').length,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt
+    });
+  } catch (error: any) {
+    console.error(`❌ Failed to get session ${sessionId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to retrieve session',
+      details: error.message 
+    });
+  }
+});
+
+app.post('/api/chat/:sessionId/refresh', async (req: Request<{sessionId: string}>, res: Response) => {
+  const { sessionId } = req.params;
+  
+  try {
+    await chatbotService.refreshMemberData(sessionId);
+    
+    res.json({ 
+      message: 'Member data refreshed successfully',
+      sessionId 
+    });
+  } catch (error: any) {
+    console.error(`❌ Failed to refresh session ${sessionId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to refresh member data',
+      details: error.message 
+    });
+  }
+});
+
+app.delete('/api/chat/:sessionId', async (req: Request<{sessionId: string}>, res: Response) => {
+  const { sessionId } = req.params;
+  
+  try {
+    const deleted = chatbotService.deleteSession(sessionId);
+    
+    if (!deleted) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    res.json({ message: 'Session deleted successfully' });
+  } catch (error: any) {
+    console.error(`❌ Failed to delete session ${sessionId}:`, error.message);
+    res.status(500).json({ 
+      error: 'Failed to delete session',
+      details: error.message 
+    });
+  }
+});
 
 app.post('/api/financial-health/:memberId', async (req: Request<FinancialHealthParams>, res: Response) => {
   const { memberId } = req.params;
@@ -124,7 +277,7 @@ async function processFinancialHealthRequest(memberId: string, requestId: string
   }
 }
 
-app.get('/api/health', (req: Request, res: Response) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   const healthCheckId = `health_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   console.log(`[${healthCheckId}] 🏥 Health check requested`);
   
@@ -149,7 +302,7 @@ app.get('/api/health', (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/config', (req: Request, res: Response) => {
+app.get('/api/config', (_req: Request, res: Response) => {
   const configId = `config_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   console.log(`[${configId}] ⚙️ Configuration requested`);
   
@@ -176,9 +329,51 @@ app.get('/api/config', (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/tools', async (_req: Request, res: Response) => {
+  const toolsId = `tools_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  console.log(`[${toolsId}] 🔧 AI tools identification requested`);
+  
+  try {
+    const toolsEndpoint = process.env.AI_TOOLS_ENDPOINT;
+    
+    if (!toolsEndpoint) {
+      console.log(`[${toolsId}] ❌ Tools endpoint not configured`);
+      return res.status(500).json({
+        error: 'AI tools endpoint not configured',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const response = await fetch(toolsEndpoint);
+    
+    if (!response.ok) {
+      throw new Error(`Tools endpoint returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const tools = await response.json();
+    
+    console.log(`[${toolsId}] ✅ AI tools retrieved successfully from ${toolsEndpoint}`);
+    
+    res.json({
+      tools,
+      endpoint: toolsEndpoint,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.log(`[${toolsId}] ❌ Tools retrieval failed: ${error.message}`);
+    res.status(500).json({ 
+      error: 'Failed to retrieve AI tools',
+      details: error.message,
+      endpoint: process.env.AI_TOOLS_ENDPOINT,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.listen(PORT, async () => {
-  console.log(`🚀 Financial Health Dashboard Server running on port ${PORT}`);
+  console.log(`🚀 Financial Health Dashboard & Chatbot Server running on port ${PORT}`);
   console.log(`🤖 AI Service: ${process.env.AI_API_KEY ? 'Configured' : 'Not configured'}`);
+  console.log(`💬 Chatbot Service: Enabled with streaming responses`);
   console.log(`⏰ Cache TTL: ${CACHE_TTL / 1000} seconds`);
   
   try {
@@ -186,6 +381,11 @@ app.listen(PORT, async () => {
   } catch (error: any) {
     console.error('❌ Failed to initialize MCP servers:', error.message);
   }
+
+  // Setup periodic cleanup of old chat sessions
+  setInterval(() => {
+    chatbotService.cleanupOldSessions();
+  }, 60 * 60 * 1000); // Clean up every hour
 });
 
 process.on('SIGINT', async () => {
