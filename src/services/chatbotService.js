@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:4002/api';
 
 class ChatbotService {
   static async createSession(accountNumbers = ['16312']) {

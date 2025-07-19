@@ -90,7 +90,7 @@ The server requires environment variables in `.env`:
 
 - **AI_API_KEY**: Anthropic Claude API key for AI analysis
 - **MCP_SERVER_URL**: MCP server URL (default: https://dev.mcp.riseanalytics.io)
-- **PORT**: Server port (default: 3001)
+- **PORT**: Server port (default: 4002)
 
 ## Financial Health Scoring
 

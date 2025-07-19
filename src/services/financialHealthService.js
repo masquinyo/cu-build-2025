@@ -2,7 +2,7 @@ import axios from 'axios';
 
 class FinancialHealthService {
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:4002/api';
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 30000,

@@ -2,7 +2,7 @@ const axios = require('axios');
 
 async function testFinancialHealthAPI() {
   const memberId = '484877878';
-  const apiUrl = `http://localhost:3001/api/financial-health/${memberId}`;
+  const apiUrl = `http://localhost:4002/api/financial-health/${memberId}`;
   
   console.log(`🧪 Testing API endpoint: ${apiUrl}`);
   console.log(`📋 Member ID: ${memberId}`);

@@ -1,7 +1,7 @@
 // Use node-fetch for older Node.js versions
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://localhost:4002/api';
 
 async function testChatbot() {
   try {

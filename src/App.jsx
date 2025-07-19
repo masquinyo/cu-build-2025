@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Chatbot from './components/Chatbot';
 import './App.css';
 
 function App() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [accountId, setAccountId] = useState('');
   const [showChatbot, setShowChatbot] = useState(false);
+
+  // Check for account query parameter on component mount
+  useEffect(() => {
+    const accountFromQuery = searchParams.get('account');
+    if (accountFromQuery) {
+      setAccountId(accountFromQuery);
+      setShowChatbot(true);
+    }
+  }, [searchParams]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (accountId.trim()) {
+      // Update URL with account parameter
+      setSearchParams({ account: accountId.trim() });
       setShowChatbot(true);
     }
   };
@@ -16,6 +29,8 @@ function App() {
   const handleReset = () => {
     setShowChatbot(false);
     setAccountId('');
+    // Clear URL parameters
+    setSearchParams({});
   };
 
 
@@ -25,6 +40,7 @@ function App() {
         <div className="app-header">
           <div className="header-content">
             <h1>🤖 Financial Health AI Assistant</h1>
+            <p>Account: {accountId}</p>
           </div>
           <button onClick={handleReset} className="reset-button">
             🔄 New Session
@@ -76,6 +92,10 @@ function App() {
             💬 Start Conversation
           </button>
         </form>
+
+        <div className="quick-access-tip">
+          <small>💡 <strong>Quick Access:</strong> You can also access an account directly via URL: <code>?account=16312</code></small>
+        </div>
 
         <div className="capabilities-grid">
           <div className="capability-card">
