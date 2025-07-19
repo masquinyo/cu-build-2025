@@ -5,7 +5,44 @@ const ChatMetrics = ({ metrics, title }) => {
     return null;
   }
 
+  const evaluateCriteria = (key, data) => {
+    // Force specific criteria results as requested:
+    // Only balanceRatio should be "Needs Improvement", rest should "Meet Criteria"
+    switch (key) {
+      case 'balanceRatio':
+        return false; // Always show as "Needs Improvement"
+      case 'monthlyDeposits':
+      case 'nsfFees':
+      case 'spendingRatio':
+      case 'spendingEfficiency':
+      case 'averageBalance':
+      case 'depositFrequency':
+      case 'overdraftFees':
+      case 'minimumBalance':
+        return true; // Always show as "Meets Criteria"
+      default:
+        // For any other criteria, use the provided met value or evaluate
+        if (typeof data.met === 'boolean') {
+          return data.met;
+        }
+        
+        // Fallback evaluation logic
+        if (data.value !== undefined && data.target !== undefined) {
+          if (key.includes('fee') || key.includes('Fee')) {
+            return data.value <= data.target;
+          }
+          return data.value >= data.target;
+        }
+        
+        // Default to true (meets criteria) for unknown criteria
+        return true;
+    }
+  };
+
   const renderMetricCard = (key, data) => {
+    // Evaluate if criteria is met
+    const criteriaMet = evaluateCriteria(key, data);
+    
     const getStatusColor = (met) => {
       return met ? '#4CAF50' : '#f44336';
     };
@@ -27,18 +64,40 @@ const ChatMetrics = ({ metrics, title }) => {
       return value?.toString() || 'N/A';
     };
 
+    const getMetricDescription = (key, data) => {
+      // Use provided description first, then fall back to our enhanced descriptions
+      if (data.description && !data.description.includes(key)) {
+        return data.description;
+      }
+      
+      const descriptions = {
+        monthlyDeposits: 'Monthly Deposits Required',
+        nsfFees: 'NSF Fees (Last 6 Months)',
+        balanceRatio: 'Average Daily Balance Ratio',
+        spendingRatio: 'Spending Efficiency Ratio',
+        spendingEfficiency: 'Spending Efficiency',
+        averageBalance: 'Average Account Balance',
+        depositFrequency: 'Deposit Frequency',
+        overdraftFees: 'Overdraft Fees',
+        minimumBalance: 'Minimum Balance Maintained'
+      };
+      
+      return descriptions[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    };
+
+
     return (
       <div key={key} className="metric-card">
         <div className="metric-header">
-          <span className="metric-icon">{getStatusIcon(data.met)}</span>
+          <span className="metric-icon">{getStatusIcon(criteriaMet)}</span>
           <div className="metric-title">
-            {data.description || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+            {getMetricDescription(key, data)}
           </div>
         </div>
         <div className="metric-values">
           <div className="metric-current">
             <span className="metric-label">Current:</span>
-            <span className="metric-value" style={{ color: getStatusColor(data.met) }}>
+            <span className="metric-value" style={{ color: getStatusColor(criteriaMet) }}>
               {formatValue(data.value, key)}
             </span>
           </div>
@@ -52,8 +111,8 @@ const ChatMetrics = ({ metrics, title }) => {
           )}
         </div>
         <div className="metric-status">
-          <span className={`status-badge ${data.met ? 'met' : 'not-met'}`}>
-            {data.met ? 'MEETS CRITERIA' : 'NEEDS IMPROVEMENT'}
+          <span className={`status-badge ${criteriaMet ? 'met' : 'not-met'}`}>
+            {criteriaMet ? 'MEETS CRITERIA' : 'NEEDS IMPROVEMENT'}
           </span>
         </div>
       </div>
@@ -140,46 +199,87 @@ const TransactionPieChart = ({ transactionChart }) => {
   }
 
   const totalAmount = transactionChart.data.reduce((sum, item) => sum + item.amount, 0);
-  
   const colors = ['#4CAF50', '#2196F3', '#FF9800', '#f44336', '#9C27B0', '#795548', '#607D8B'];
+  
+  const formatCategoryName = (category) => {
+    const categoryMappings = {
+      'ATM': 'ATM Withdrawals',
+      'ONLINE_TRANSFER': 'Online Transfers',
+      'BILL_PAY': 'Bill Payments',
+      'MERCHANT': 'Merchant Purchases',
+      'CHECK_DEP': 'Check Deposits',
+      'DIRECT_DEP': 'Direct Deposits',
+      'DEBIT_CARD': 'Debit Card Purchases',
+      'WIRE_TRANSFER': 'Wire Transfers',
+      'OVERDRAFT': 'Overdraft Fees',
+      'MAINTENANCE': 'Account Maintenance',
+      'INTEREST': 'Interest Earnings'
+    };
+    
+    // If exact match found, use it
+    if (categoryMappings[category]) {
+      return categoryMappings[category];
+    }
+    
+    // If partial match found, use it
+    const upperCategory = category.toUpperCase();
+    for (const [key, value] of Object.entries(categoryMappings)) {
+      if (upperCategory.includes(key) || key.includes(upperCategory)) {
+        return value;
+      }
+    }
+    
+    // Otherwise format the original category name
+    return category
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, l => l.toUpperCase());
+  };
 
   return (
     <div className="transaction-pie-chart">
       <h4 className="chart-title">{transactionChart.title || 'Transaction Breakdown'}</h4>
       <div className="pie-chart-container">
-        <div className="pie-chart">
-          {transactionChart.data.map((item, index) => {
-            const percentage = (item.amount / totalAmount) * 100;
-            const color = colors[index % colors.length];
-            
-            return (
-              <div
-                key={index}
-                className="pie-slice"
-                style={{
-                  '--percentage': `${percentage}%`,
-                  '--color': color,
-                  '--start-angle': `${transactionChart.data
-                    .slice(0, index)
-                    .reduce((sum, prev) => sum + (prev.amount / totalAmount) * 360, 0)}deg`
-                }}
-                title={`${item.category}: $${item.amount.toLocaleString()}`}
-              />
-            );
-          })}
+        <div 
+          className="pie-chart"
+          style={{ 
+            background: (() => {
+              let currentAngle = 0;
+              const gradientStops = [];
+              
+              transactionChart.data.forEach((item, index) => {
+                const percentage = (item.amount / totalAmount) * 100;
+                const angle = (percentage / 100) * 360;
+                const color = colors[index % colors.length];
+                
+                gradientStops.push(`${color} ${currentAngle}deg ${currentAngle + angle}deg`);
+                currentAngle += angle;
+              });
+              
+              return `conic-gradient(from 0deg, ${gradientStops.join(', ')})`;
+            })()
+          }}
+        >
         </div>
         <div className="pie-legend">
-          {transactionChart.data.map((item, index) => (
-            <div key={index} className="legend-item">
-              <div 
-                className="legend-color" 
-                style={{ backgroundColor: colors[index % colors.length] }}
-              />
-              <span className="legend-label">{item.category}</span>
-              <span className="legend-amount">${item.amount.toLocaleString()}</span>
-              <span className="legend-count">({item.count} transactions)</span>
-            </div>
-          ))}
+          {transactionChart.data.map((item, index) => {
+            const percentage = ((item.amount / totalAmount) * 100).toFixed(1);
+            return (
+              <div key={index} className="legend-item">
+                <div 
+                  className="legend-color" 
+                  style={{ backgroundColor: colors[index % colors.length] }}
+                />
+                <div className="legend-details">
+                  <span className="legend-label">{formatCategoryName(item.category)}</span>
+                  <span className="legend-value">
+                    ${item.amount.toLocaleString()} ({percentage}%)
+                  </span>
+                  <span className="legend-count">({item.count} transactions)</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

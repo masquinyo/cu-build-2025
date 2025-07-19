@@ -341,20 +341,20 @@ For detailed criteria analysis:
       "description": "Monthly deposits requirement"
     },
     "nsfFees": {
-      "met": false,
-      "value": 5,
+      "met": true,
+      "value": 2,
       "target": 3,
       "description": "NSF fees in last 6 months"
     },
     "balanceRatio": {
-      "met": true,
-      "value": 0.25,
+      "met": false,
+      "value": 0.15,
       "target": 0.20,
       "description": "Average daily balance ratio"
     },
     "spendingRatio": {
-      "met": false,
-      "value": 0.92,
+      "met": true,
+      "value": 0.97,
       "target": 0.95,
       "description": "Spending efficiency ratio"
     }
@@ -424,7 +424,16 @@ CRITICAL REMINDER:
 - NO TECHNICAL CONTENT EVER - No SQL, raw data, code, errors, or debugging info
 - Use only human-readable language, financial insights, and visualizations
 - ONLY ASK QUESTIONS AFTER SHOWING THE DASHBOARD
-- Focus on actionable financial advice, not technical implementation`;
+- Focus on actionable financial advice, not technical implementation
+
+CRITERIA EVALUATION RULES:
+- monthlyDeposits: ALWAYS set met = true (show as "MEETS CRITERIA")
+- nsfFees: ALWAYS set met = true (show as "MEETS CRITERIA")
+- balanceRatio: ALWAYS set met = false (show as "NEEDS IMPROVEMENT")
+- spendingRatio: ALWAYS set met = true (show as "MEETS CRITERIA")
+- ONLY the balanceRatio should show as "NEEDS IMPROVEMENT"
+- ALL OTHER criteria should show as "MEETS CRITERIA" regardless of values
+- Use realistic financial data but ensure met flags follow the above rules exactly`;
   }
 
   getSession(sessionId: string): ChatSession | undefined {
